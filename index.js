@@ -1,8 +1,7 @@
 var fs              = require('fs');
 var path            = require('path');
-var temp            = require('temp');
 var wrench          = require('wrench');
-var cluster         = require('cluster');
+var serial          = require('serial');
 var handlebars      = require('handlebars');
 var child_processes = require('child_process');
 
@@ -22,35 +21,56 @@ var DEFAULT_SERVER_STARTED_CONDITION = 1000;
  */
 function Turtle() {
 
-  var generatedTemplateFilePath = '.itw.test.template.html';
-  var defaultTemplateOptions  = {
-    path: './default.template.html'
-  };
-  var defaultTestDirectory = './default.template.html';
-  var defaultServerPath = 'server.js';
-
-  var tests = [];
   var serverOptions;
-  var templateOptions;
+  var currentTemplate;
 
-  var serverHandle;
+  var serverProcess;
 
   process.on('exit', function() {
     stopServer();
   });
 
+  // Array of array of tests.
+  // - the first dimension represents a single client
+  // - the second dimension (nested) is the list of tests to be run in this client
+  var clients = [];
+  var currentClient = {
+    template: null,
+    tests: []
+  };
+  clients.push(currentClient);
+
   function startServer(serverOptions, serverStartedCallback) {
     if(serverOptions && serverOptions.path) {
-      cluster.settings = {
-        exec: 'server.js',
-        silent: false
-      };
 
-      serverHandle = child_processes.spawn('node', [serverPath], {cwd: process.cwd(), env: process.env, stdio: 'inherit'});
+      debug('Starting server');
+
+      var options = [serverOptions.path];
+
+      if(serverOptions.args) {
+
+        for(var i = 0 ; i < serverOptions.args.length ; i++) {
+
+          options.push(serverOptions.args[i]);
+
+        }
+
+      }
+
+      serverProcess = child_processes.spawn('node', options, {cwd: process.cwd(), env: process.env});
+
+      serverProcess.stdout.pipe(process.stdout)
+      serverProcess.stderr.pipe(process.stderr)
 
       switch(typeof serverOptions.started) {
         case 'object':
-          // TODO: support regexp
+          if(serverOptions.started instanceof RegExp) {
+            listenForStartedRegExp(serverProcess, serverOptions.started, function() {
+              serverStartedCallback();
+            })
+          } else {
+            throw new Error("Expected the server.started option to be a regular expression");
+          }
           break;
         case 'number':
           setTimeout(serverStartedCallback, serverOptions.started);
@@ -65,9 +85,41 @@ function Turtle() {
     }
   }
 
+  // this is ugly. close your eyes.
+  function listenForStartedRegExp(serverProcess, startedRegExp, callback) {
+    var stdout = '';
+    var stderr = '';
+    register = false;
+
+    serverProcess.stdout.on('data', listenStdout)
+    serverProcess.stderr.on('data', listenStderr)
+
+    function done() {
+      stdout = null;
+      stderr = null;
+      serverProcess.stdout.removeListener('data', listenStdout);
+      serverProcess.stderr.removeListener('data', listenStderr);
+      callback();
+    }
+
+    function listenStdout(data) {
+      stdout += data.toString('utf8');
+      if(startedRegExp.test(stdout)) {
+        done()
+      }
+    }
+
+    function listenStderr(data) {
+      stderr += data.toString('utf8');
+      if(startedRegExp.test(stderr)) {
+        done()
+      }
+    }
+  }
+
   function stopServer() {
-    if(serverHandle) {
-      serverHandle.kill();
+    if(serverProcess) {
+      serverProcess.kill();
     }
   }
 
@@ -75,33 +127,38 @@ function Turtle() {
 
     if(tests && tests.length > 0 && templateOptions && templateOptions.path) {
 
-      generateHtmlWrapper(templateOptions, tests, function(err, generatedTemplateFilePath) {
+      var generatedTemplateFilePath = generateHtmlWrapper(templateOptions, tests);
 
-        var processHandle = child_processes.spawn(
-          'mocha-phantomjs',
-          [
-            generatedTemplateFilePath,
-            '-s',
-            'webSecurityEnabled=false',
-            '-s',
-            'localToRemoteUrlAccessEnabled=true'
-          ],
-          {
-            cwd: process.cwd(),
-            stdio: 'inherit'
-          }
-        );
+      var processHandle = child_processes.spawn(
+        __dirname + '/node_modules/mocha-phantomjs/bin/mocha-phantomjs',
+        [
+          generatedTemplateFilePath,
+          '-s',
+          'webSecurityEnabled=false',
+          '-s',
+          'localToRemoteUrlAccessEnabled=true',
+          '--path',
+          __dirname + '/node_modules/phantomjs/bin/phantomjs',
+          '-C'
+        ],
+        {
+          cwd: process.cwd(),
+          stdio: 'inherit'
+        }
+      );
 
-        processHandle.on('close', function (code) {
-          callback(code);
-        });
+      processHandle.on('close', function (code) {
+        callback(code);
+        fs.unlinkSync(generatedTemplateFilePath);
+      });
 
-      })
     } else {
       // TODO: log
       setImmediate(callback);
     }
   }
+
+
 
   /** Configure a server to be started before the tests
    *
@@ -118,7 +175,7 @@ function Turtle() {
    */
   this.server = function(options) {
     if(serverOptions) {
-      throw new Error("Server can't be defined more than once, yet...");
+      throw new Error('Server cannot be defined more than once.');
     } else {
       serverOptions = options;
     }
@@ -134,11 +191,11 @@ function Turtle() {
    * @returns {Turtle}
    */
   this.template = function(options) {
-    if(templateOptions) {
-      // TODO: allow definition of multiple templates & clients
-      throw new Error("Template can't be defined more than once, yet...");
+    currentTemplate = options;
+    if(!currentClient.template) {
+      currentClient.template = currentTemplate;
     } else {
-      templateOptions = options;
+      throw new Error("The current client already has a template. Templates should always be declared after a client");
     }
     return this;
   };
@@ -152,9 +209,28 @@ function Turtle() {
    * @returns {Turtle}
    */
   this.test = function(options) {
-    tests.push(options);
+    currentClient.tests.push(options);
     return this;
   };
+
+  /** Declares a new client.
+   * All subsequent test() calls will add test to the latest declared client.
+   */
+  this.client = function() {
+    if(!currentClient.template) {
+
+      throw new Error("You need to declare a template before declaring a new client");
+
+    } else if(currentClient.tests.length > 0) { // we do not want to create clients with no test because it does not make sense
+
+      currentClient = {
+        tests: []
+      };
+      clients.push(currentClient);
+
+    }
+    return this;
+  }
 
   /** Actually run the tests
    *
@@ -162,91 +238,164 @@ function Turtle() {
    *                            The exit code reflects the tests exit code: `0` on success.
    */
   this.run = function(callback) {
-    startServer(function () {
-      runTests(templateOptions, tests, function(exitCode) {
-        stopServer();
-        if(callback) {
-          callback(exitCode);
+
+    if(currentTemplate !== currentClient.template) {
+      throw new Error("A template was declared but there is no subsequent client to use this template. Either remove this template or declare a new client to use with this template.");
+    }
+    if(currentClient.tests.length === 0) {
+      throw new Error("There is no tests associated with the latest client (could be the default client if you did not explicitely declared a client)");
+    }
+
+    startServer(serverOptions, function () {
+
+      var r = new serial.ParallelRunner();
+
+      var previousTemplate; // we want to propagate templates to the subsequent clients unless they have their own template
+
+      for(var i = 0 ; i < clients.length ; i++) {
+        debug("running client ["+i+"]")
+        if(!clients[i].template) {
+          clients[i].template = previousTemplate;
         } else {
-          process.exit(exitCode);
+          previousTemplate = clients[i].template;
         }
-      });
-    });
-  };
-}
 
-function generateHtmlWrapper(templateOptions, tests, callback) {
-
-  var testContents = [];
-
-  // retrieve all the tests referenced
-  for(var i = 0 ; i < tests.length ; i++) {
-    if(tests[i] && tests[i].path) {
-      testContents = testContents.concat(extractFilesContent(tests[i].path, tests[i].filter));
-    }
-  }
-
-  var testWrapperTemplate = fs.readFileSync(templateOptions.path, 'utf8');
-
-  var aggregatedHTMLTests = handlebars.compile(testWrapperTemplate)({tests: testContents});
-
-  // create a temporary file to store the generated template file
-  temp.open('node-turtle', function(err, info) {
-
-    if(err) {
-
-      callback(err, undefined)
-
-    } else {
-
-      fs.write(info.fd, aggregatedHTMLTests);
-
-      fs.close(info.fd, function(err) {
-        callback(err, info.path);
-      });
-
-    }
-  });
-}
-
-function extractFilesContent(path, regExp) {
-  var contents = [];
-  if(path) {
-
-    var path = path.normalize(path);
-    var stats = fs.statSync(path);
-
-    if(stats.isFile() && (!regExp || regExp.test(path))) {
-
-      contents.push(fs.readFileSync(path, 'utf8'));
-
-    } else if(stats.isDirectory()) {
-
-      var fileNames = wrench.readdirSyncRecursive(path);
-
-      for(var i = 0 ; i < fileNames.length ; i++) {
-        // TODO: I don't like this duplication of code but don't care much right now.
-
-        path = path.normalize(fileNames[i]);
-        stats = fs.statSync(path);
-
-        if(stats.isFile() && (!regExp || regExp.test(path))) {
-
-          contents.push(fs.readFileSync(path, 'utf8'));
-
+        if(clients[i].tests.length > 0) {
+          r.add(runTests, clients[i].template, clients[i].tests);
         }
+
       }
 
-      contents = contents.concat(childContents)
+      r.run(function(exitCodes) {
+        stopServer();
 
-    } else {
-      // TODO: log.debug() that either this file is unsupported or does not match regexp
+        // don't actually care about the worse exit code. Just need to know if there was one failure.
+        var worseExistCode = 0;
+        for(var i = 0 ; i < exitCodes.length ; i++) {
+          if(exitCodes[i] > 0) {
+            worseExistCode = exitCodes[i];
+            break;
+          }
+        }
+
+        if(callback) {
+          callback(worseExistCode);
+        } else {
+          process.exit(worseExistCode);
+        }
+      });
+
+    });
+  };
+
+  this.debug = function() {
+    debugEnabled = true;
+    return this;
+  };
+
+  var debugEnabled = false;
+
+  function debug(msg) {
+    if(debugEnabled) {
+      console.log('turtle - ' + msg);
+    }
+  }
+
+  function generateHtmlWrapper(templateOptions, tests) {
+
+    var testContents = [];
+
+    // retrieve all the tests referenced
+    for(var i = 0 ; i < tests.length ; i++) {
+      if(tests[i] && tests[i].path) {
+        testContents = testContents.concat(extractFilesContent(tests[i].path, tests[i].filter));
+      }
     }
 
-  }
-  return contents;
+    var testWrapperTemplate = fs.readFileSync(templateOptions.path, 'utf8');
 
+    var aggregatedHTMLTests = handlebars.compile(testWrapperTemplate)(testContents);//{tests: testContents});
+
+    var templateDirName = path.dirname(templateOptions.path);
+    var extension = path.extname(templateOptions.path);
+    var compiledFileName = getUnusedFileName(templateDirName + path.sep + 'safe_to_delete' + path.basename(templateOptions.path, extension) + '.turtle' + extension);
+
+    fs.writeFileSync(compiledFileName, aggregatedHTMLTests, 'utf8');
+
+    return compiledFileName;
+  }
+
+  /** Transforms filename.ext into filename.N.ext where N starts at 1 and ends when the file name does not already exist.
+   * The reason for this is to prevent a template from being overwritten when it is used by multiple tests at the same
+   * time.
+   */
+  function getUnusedFileName(originalFileName, count) {
+
+    var newFileName = originalFileName;
+
+    if(count) {
+
+      var dirName = path.dirname(originalFileName);
+      var extension = path.extname(originalFileName);
+      newFileName = dirName + path.sep + path.basename(originalFileName, extension) + '.' + count + extension;
+      count++;
+
+    } else {
+      count = 1;
+    }
+
+    if(fs.existsSync(newFileName)) {
+      return getUnusedFileName(originalFileName, count);
+    } else {
+      return newFileName;
+    }
+  }
+
+  function extractFilesContent(fileOrDirPath, regExp) {
+    var contents = [];
+    if(fileOrDirPath) {
+
+      var fileOrDirPath = path.normalize(fileOrDirPath);
+      var stats = fs.statSync(fileOrDirPath);
+
+      debug("Looking for tests into path ["+fileOrDirPath+"]");
+
+      if(stats.isFile() && (!regExp || (regExp instanceof RegExp && regExp.test(fileOrDirPath)))) {
+
+        debug("File ["+fileOrDirPath+"] is included")
+        contents.push(new handlebars.SafeString(fs.readFileSync(fileOrDirPath, 'utf8')));
+
+      } else if(stats.isDirectory()) {
+
+        var fileNames = wrench.readdirSyncRecursive(fileOrDirPath);
+
+        for(var i = 0 ; i < fileNames.length ; i++) {
+          // TODO: I don't like this duplication of code but don't care much right now.
+
+          var filePath = path.normalize(fileOrDirPath + path.sep + fileNames[i]);
+          stats = fs.statSync(filePath);
+
+          if(stats.isFile() && (!regExp || regExp.test(filePath))) {
+
+            debug("File ["+filePath+"] is included")
+            contents.push(new handlebars.SafeString(fs.readFileSync(filePath, 'utf8')));
+
+          } else {
+            debug("Path ["+filePath+"] is excluded")
+          }
+        }
+
+      } else {
+        // TODO: log.debug() that either this file is unsupported or does not match regexp
+      }
+
+    }
+    return contents;
+
+
+  }
 
 }
+
 
 module.exports = Turtle;

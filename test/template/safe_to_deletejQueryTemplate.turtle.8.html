@@ -1,0 +1,63 @@
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../node_modules/mocha/mocha.css" />
+</head>
+<body>
+    <div id="mocha"></div>
+    <script src="../lib/jQuery.js"></script>
+    <script src="../../node_modules/mocha/mocha.js"></script>
+    <script>
+        mocha.ui('bdd');
+    </script>
+    
+    <script>describe('Remote testing the http server', function() {
+
+  it('prerequisites: jQuery ($) should exist', function() {
+
+    if(typeof $ == 'undefined') {
+      throw new Error("Missing jQuery ($)");
+    }
+
+  })
+
+  it('$.get should return with no failure', function(done) {
+
+    $.get('http://localhost:4200/')
+      .success(function(data) {
+        console.log(data);
+        done();
+      })
+      .fail(function(err) {
+        done(new Error(JSON.stringify(err)));
+      })
+
+  })
+
+})</script>
+    
+    <script>describe('Remote testing the server behaviour', function() {
+
+  it('$.get should return "ok"', function(done) {
+
+    $.get('http://localhost:4200/')
+      .success(function(data) {
+        if(data === 'ok') {
+          done();
+        } else {
+          done(new Error('Expected the returned data to be "ok" but it was "'+data+'"'));
+        }
+      })
+      .fail(function(err) {
+        done(new Error(JSON.stringify(err)));
+      })
+
+  })
+
+})</script>
+    
+    <script>
+        if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
+        else { mocha.run(); }
+    </script>
+</body>
+</html>

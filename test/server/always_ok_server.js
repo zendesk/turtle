@@ -1,6 +1,13 @@
 var http = require('http');
 
-var port = 4200;
+var program = require('commander');
+
+program
+  .version('0.0.1')
+  .option('-p, --port <n>', 'the listening port of the HTTP server', parseInt)
+  .parse(process.argv);
+
+var port = program.port || 4200;
 
 server = http.createServer(function(req, res) {
   res.write('ok');

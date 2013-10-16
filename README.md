@@ -7,44 +7,9 @@ Requirements:
 
 ## Usage
 
+Allows to start multiple clients, with multiple templates (optional).
 
-### API, step 1
-
-Multiple clients live in the same browser:
-
-```
-  var TR = require('TestRunner');
-  new TR().template({
-      path: 'node_modules/radar_client/test/lib/default_wrapper.html'
-    })
-    .server({
-      path: __dirname + '../server.js'
-    })
-    .test({ path: <path_to_test_directory1>, match: /filesFilterRegExp/i })
-    .run();
-```
-
-### API, step 2
-
-This allows to run 2 clients in parallel in different browser contexts
-
-```
-  var TR = require('TestRunner');
-  var testRunner = new TR();
-  testRunner.server({ // server is optional
-      path: __dirname + '../server.js'
-    })
-    .client() // the two clients are run simultaneously in different child processes
-      .test({ path: <path_to_mocha_test_client1> })
-    .client()
-      .test({ path: <path_to_mocha_test_client2> })
-      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i }) // these tests are run sequentially
-    .run();
-```
-
-### API, step 3
-
-This allows to start multiple servers. Later, we could start radar and chat_manager this way.
+TODO: support for multiple servers, more tests
 
 ```
   var TR = require('TestRunner');
@@ -57,10 +22,21 @@ This allows to start multiple servers. Later, we could start radar and chat_mana
     .server({ // server is optional
       path: __dirname + 'node_modules/chat-manager/server.js'
     })
+
     .client() // Each client is started in a different phantomjs instances.
+      .template({
+        path: 'node_modules/radar_client/test/lib/custom_wrapper1.html'
+      })
       .test({ path: <path_to_mocha_test_client1> })
+
     .client()
+      .template({
+        path: 'node_modules/radar_client/test/lib/custom_wrapper2.html'
+      })
       .test({ path: <path_to_mocha_test_client2> })                           // these two tests
-      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i })  // are run in the same browser
+      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i })  // are run in the same browser.client()
+
+    .client() // this client will use the previously defined template
+      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i })
     .run();
 ```
