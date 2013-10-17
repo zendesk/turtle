@@ -59,8 +59,21 @@ function Turtle() {
 
       serverProcess = child_processes.spawn('node', options, {cwd: process.cwd(), env: process.env});
 
-      serverProcess.stdout.pipe(process.stdout)
-      serverProcess.stderr.pipe(process.stderr)
+      var serverLogsPrefix = '';
+      if(serverOptions.log && serverOptions.log.prefix) {
+        serverLogsPrefix = serverOptions.log.prefix;
+      }
+
+      serverProcess.stdout.on('data', function(data) {
+        if(!serverOptions.log || !serverOptions.log.silent) {
+          process.stdout.write(serverLogsPrefix + data.toString('utf8'));
+        }
+      })
+      serverProcess.stderr.on('data', function(data) {
+        if(!serverOptions.log || !serverOptions.log.silent) {
+          process.stderr.write(serverLogsPrefix + data.toString('utf8'));
+        }
+      })
 
       switch(typeof serverOptions.started) {
         case 'object':
@@ -69,7 +82,7 @@ function Turtle() {
               serverStartedCallback();
             })
           } else {
-            throw new Error("Expected the server.started option to be a regular expression");
+            throw new Error('Expected the server.started option to be a regular expression');
           }
           break;
         case 'number':
@@ -148,8 +161,9 @@ function Turtle() {
       );
 
       processHandle.on('close', function (code) {
-        callback(code);
+        // TODO: only delete file on test success then on test failure, rename file so that we don't keep creating a new one for each failed test
         fs.unlinkSync(generatedTemplateFilePath);
+        callback(code);
       });
 
     } else {
@@ -168,6 +182,9 @@ function Turtle() {
    *                started - a condition for the server to be considered started. Can either be a number representing a
    *                          timeout in milliseconds or can be a RegExp which will be tested against both stdout and
    *                          stderr. Defaults to 1000.
+   *                log
+   *                    prefix - prefix server's logs with this string (don't forget a trailing space)
+   *                    silent - do not output server's logs
    *
    * A server is run with your `cwd` and your current environment variables.
    *
@@ -195,7 +212,7 @@ function Turtle() {
     if(!currentClient.template) {
       currentClient.template = currentTemplate;
     } else {
-      throw new Error("The current client already has a template. Templates should always be declared after a client");
+      throw new Error('The current client already has a template. Templates should always be declared after a client');
     }
     return this;
   };
@@ -219,7 +236,7 @@ function Turtle() {
   this.client = function() {
     if(!currentClient.template) {
 
-      throw new Error("You need to declare a template before declaring a new client");
+      throw new Error('You need to declare a template before declaring a new client');
 
     } else if(currentClient.tests.length > 0) { // we do not want to create clients with no test because it does not make sense
 
@@ -240,10 +257,10 @@ function Turtle() {
   this.run = function(callback) {
 
     if(currentTemplate !== currentClient.template) {
-      throw new Error("A template was declared but there is no subsequent client to use this template. Either remove this template or declare a new client to use with this template.");
+      throw new Error('A template was declared but there is no subsequent client to use this template. Either remove this template or declare a new client to use with this template.');
     }
     if(currentClient.tests.length === 0) {
-      throw new Error("There is no tests associated with the latest client (could be the default client if you did not explicitely declared a client)");
+      throw new Error('There is no tests associated with the latest client (could be the default client if you did not explicitely declared a client)');
     }
 
     startServer(serverOptions, function () {
@@ -253,7 +270,7 @@ function Turtle() {
       var previousTemplate; // we want to propagate templates to the subsequent clients unless they have their own template
 
       for(var i = 0 ; i < clients.length ; i++) {
-        debug("running client ["+i+"]")
+        debug('running client ['+i+']')
         if(!clients[i].template) {
           clients[i].template = previousTemplate;
         } else {
@@ -318,7 +335,7 @@ function Turtle() {
 
     var templateDirName = path.dirname(templateOptions.path);
     var extension = path.extname(templateOptions.path);
-    var compiledFileName = getUnusedFileName(templateDirName + path.sep + 'safe_to_delete' + path.basename(templateOptions.path, extension) + '.turtle' + extension);
+    var compiledFileName = getUnusedFileName(templateDirName + path.sep + 'safe_to_delete.' + path.basename(templateOptions.path, extension) + '.turtle' + extension);
 
     fs.writeFileSync(compiledFileName, aggregatedHTMLTests, 'utf8');
 
@@ -358,11 +375,11 @@ function Turtle() {
       var fileOrDirPath = path.normalize(fileOrDirPath);
       var stats = fs.statSync(fileOrDirPath);
 
-      debug("Looking for tests into path ["+fileOrDirPath+"]");
+      debug('Looking for tests into path ['+fileOrDirPath+']');
 
       if(stats.isFile() && (!regExp || (regExp instanceof RegExp && regExp.test(fileOrDirPath)))) {
 
-        debug("File ["+fileOrDirPath+"] is included")
+        debug('File ['+fileOrDirPath+'] is included')
         contents.push(new handlebars.SafeString(fs.readFileSync(fileOrDirPath, 'utf8')));
 
       } else if(stats.isDirectory()) {
@@ -377,11 +394,11 @@ function Turtle() {
 
           if(stats.isFile() && (!regExp || regExp.test(filePath))) {
 
-            debug("File ["+filePath+"] is included")
+            debug('File ['+filePath+'] is included')
             contents.push(new handlebars.SafeString(fs.readFileSync(filePath, 'utf8')));
 
           } else {
-            debug("Path ["+filePath+"] is excluded")
+            debug('Path ['+filePath+'] is excluded')
           }
         }
 
