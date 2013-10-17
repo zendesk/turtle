@@ -161,8 +161,10 @@ function Turtle() {
       );
 
       processHandle.on('close', function (code) {
-        // TODO: only delete file on test success then on test failure, rename file so that we don't keep creating a new one for each failed test
-        fs.unlinkSync(generatedTemplateFilePath);
+        // TODO: Automate keepTestFile: only delete file on test success then on test failure, rename file so that we don't keep creating a new one for each failed test
+        if(!keepTestFile) {
+          fs.unlinkSync(generatedTemplateFilePath);
+        }
         callback(code);
       });
 
@@ -307,6 +309,12 @@ function Turtle() {
 
   this.debug = function() {
     debugEnabled = true;
+    return this;
+  };
+
+  var keepTestFile = false;
+  this.keepTestFile = function() {
+    keepTestFile = true;
     return this;
   };
 
