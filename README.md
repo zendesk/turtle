@@ -2,6 +2,8 @@
 
 Turtles handles server start/shutdown and client side test in a headless browser (mocha-phantomjs).
 
+This module is still work in progress.
+
 
 ## Requirements
 
@@ -16,38 +18,45 @@ Allows to start multiple clients, with multiple templates (optional).
 
 ```
   var Turtle = require('turtle');
-  new Turtle()
 
-    .server({ // server is optional
-      path: __dirname + 'node_modules/radar/server.js',
-      args: ['--port', '10000']
-    })
+  var turtle = new Turtle();
 
-    .client() // Each client is started in a different phantomjs instances.
-      .template({
-        path: 'node_modules/radar_client/test/lib/custom_wrapper1.html'
-      })
-      .test({ path: <path_to_mocha_test_client1> })
+  turtle.server({
+    path: __dirname + '/server/always_ok_server.js',
+    args: ['--port', '4200'],
+    started: /^Server started/img
+  });
 
-    .client()
-      .template({
-        path: 'node_modules/radar_client/test/lib/custom_wrapper2.html'
-      })
-      .test({ path: <path_to_mocha_test_client2> })                           // these two tests
-      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i })  // are run in the same browser.client()
+  turtle.client().
+    template({
+      path: __dirname + '/template/jQueryTemplate.html'
+    }).
+    test({
+      path: __dirname + "/client",
+      filter: /\.test1\.client\.js$/im
+    });
 
-    .client() // this client will use the previously defined template
-      .test({ path: <path_to_test_directory>, match: /filesFilterRegExp/i })
+  turtle.client().
+    template({
+      path: __dirname + '/template/globalVariableTemplate.html'
+    }).
+    test({
+      path: __dirname + "/client/global_variable.test2.client.js"
+    });
 
-    .run();
+  turtle.run();
 ```
 
-## turtle.server(options)
+## Turtle
+
+This is the main test runner
+
+### turtle.server(options)
 
 A server is a child process started before the tests.
 
-### parameters
-#### options:Object
+#### parameters
+##### options:Object
 
 - path:String the file path of the node.js server entry point.
 - args:Array a list of arguments to pass to the child process. The format is the same as arguments in childProcess.spawn()
@@ -55,22 +64,31 @@ A server is a child process started before the tests.
   - prefix:String prefix the server logs with this string
   - silent:Boolean do not show the server logs in stdout or stderr
 
-## turtle.client()
+### turtle.client()
 
-A client is an instance of headless browser. There is always one default client. Each client is started in a forked
+Creates and returns a new client.
+
+A ```Client``` is an instance of headless browser. There is always one default client. Each client is started in a forked
 process. They are independent and there is no guaranty that they will run at exactly the same time.
 
-## turtle.template(options)
+
+### turtle.run([callback])
+
+Effectively run the tests.
+
+## Client
+
+### client.template(options)
 
 A template is a HTML wrapper that embeds tests. It should include all the javascript libraries that are needed by the
 tests.
 
-### parameters
-#### options:Object
+#### parameters
+##### options:Object
 
 - path:String the file path of the template
 
-### example
+#### example
 
 ```
   <head>
@@ -111,22 +129,18 @@ deleted when turtle is done.
 Templates are tied to a client. If you define only one template, every client will use the same template but you could
 declare a different template for each client.
 
-## turtle.test(options)
+### client.test(options)
 
 Add one or several tests to the current client.
 
-### parameters
-#### options:Object
+#### parameters
+##### options:Object
 
 - path:String directory or filename
 - match:RegExp a regular expression against which file names are tested. Matching files are included.
 
-## turtle.run([callback])
-
-Effectively run the tests.
-
-### parameters
-#### callback (optional)
+#### parameters
+##### callback (optional)
 
 The callback takes one argument which is an exit code. If zero, all tests are successful. If different than zero, at
 least one of the tests failed.
