@@ -76,6 +76,14 @@ process. They are independent and there is no guaranty that they will run at exa
 
 Effectively run the tests.
 
+#### parameters
+##### callback (optional)
+
+The callback takes one argument which is an exit code. If zero, all tests are successful. If different than zero, at
+least one of the tests failed.
+
+When no callback is defined the process will exit with an exit code different than zero if there is a test failure.
+
 ## Client
 
 ### client.template(options)
@@ -139,14 +147,9 @@ Add one or several tests to the current client.
 - path:String directory or filename
 - match:RegExp a regular expression against which file names are tested. Matching files are included.
 
-#### parameters
-##### callback (optional)
+### client.keepTestFile()
 
-The callback takes one argument which is an exit code. If zero, all tests are successful. If different than zero, at
-least one of the tests failed.
-
-When no callback is defined the process will exit with an exit code different than zero if there is a test failure.
-
+Do not delete the html test file after the tests have ended.
 
 ## TODO
 
