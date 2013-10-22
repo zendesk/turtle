@@ -151,3 +151,9 @@ When no callback is defined the process will exit with an exit code different th
 ## TODO
 
 - support for multiple servers, more tests
+
+
+## Copyright and License
+
+Copyright 2013, Zendesk Inc.
+Licensed under the Apache License Version 2.0, http://www.apache.org/licenses/LICENSE-2.0
