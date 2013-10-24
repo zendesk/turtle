@@ -83,25 +83,33 @@ function Turtle() {
 
       }
 
-      r.run(function(exitCodes) {
+      r.run(function(returnArguments) {
 
         server.stop();
 
         // don't actually care about the worse exit code. Just need to know if there was at least one failure.
-        var worseExistCode = 0;
-        if(exitCodes) {
-          for(var i = 0 ; i < exitCodes.length ; i++) {
-            if(exitCodes[i] !== 0) {
-              worseExistCode = exitCodes[i];
+        var exitCode;
+
+        if(returnArguments) {
+          for(var i = 0 ; i < returnArguments.length ; i++) {
+
+            exitCode = 1; // assume failure because in testing, false negative is better than false positive
+            if(returnArguments[i] && returnArguments[i].length > 0) {
+
+              var exitCode = returnArguments[i][0];
+
+            }
+
+            if(exitCode !== 0) {
               break;
             }
           }
         }
 
         if(callback) {
-          callback(worseExistCode);
+          callback(exitCode);
         } else {
-          process.exit(worseExistCode);
+          process.exit(exitCode);
         }
       });
     });

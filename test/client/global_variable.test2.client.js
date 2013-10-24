@@ -1,4 +1,4 @@
-describe('Remote testing the http server', function() {
+describe('Testing the template', function() {
 
   it('global variable exists in the template', function() {
 
@@ -6,6 +6,6 @@ describe('Remote testing the http server', function() {
       throw new Error("Missing globalVariable");
     }
 
-  })
+  });
 
-})
+});

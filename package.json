@@ -4,7 +4,7 @@
   "description": "Carries your UI tests in a phantomjs headless browser",
   "main": "index.js",
   "scripts": {
-    "test": "node test/tests.js"
+    "test": "make test"
   },
   "dependencies": {
     "handlebars": "~1.0.12",
