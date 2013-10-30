@@ -151,6 +151,56 @@ Add one or several tests to the current client.
 
 Do not delete the html test file after the tests have ended.
 
+
+
+# Ideas: reusability of server environment & templates
+
+Description of the changes, most of which are not backward compatible:
+
+- templates are now declared on the turtle instance instead of on each client.
+- a template must have a name. This name must be unique within the turtle instance.
+- turtle.export(module) now exports the turtle instance to the module passed in param.
+- template can choose not to point to an HTML file anymore but to reference files. This is important to be able to
+package the tests, make them fully standalone and not rely on relative paths.
+- turtle will prevent you from simultaneously exporting itself and running tests
+
+
+The file that defines a test environment:
+
+turtle-environment.js
+
+```
+  var turtle = new Turtle();
+
+  turtle.server({...})
+  turtle.template({
+    name: 'templateName',
+    css: [
+      'maybe/a/path/to/mocha.css'
+    ],
+    scripts: [
+      '../path/to/my/included/library.js',
+      './another/path/to/another/lib.js'
+    ]
+  })
+
+  turtle.export(module);
+
+  // I CAN NOT run tests here:
+  ~~turtle.run();~~
+```
+
+
+The file that uses this environment:
+test.js
+```
+  var turtle = require('./path/to/turtle-environment.js');
+  turtle
+    .client('templateName')
+    .test({...});
+
+  turtle.run();
+
 ## TODO
 
 - support for multiple servers, more tests
