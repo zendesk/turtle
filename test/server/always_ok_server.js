@@ -9,11 +9,12 @@ program
 
 var port = program.port || 4200;
 
-server = http.createServer(function(req, res) {
+var server = http.createServer(function(req, res) {
   res.write('ok');
   res.end();
 });
 
 server.listen(port, function() {
-  console.log("Server started at port ["+port+"]");
+  console.log('Server started at port ['+port+']');
+  process.send({ action: 'started' });
 });
