@@ -1,19 +1,24 @@
 <head>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="../node_modules/mocha/mocha.css" />
+    {{#each css}}
+    <link rel="stylesheet" href="{{path}}" />
+    {{/each}}
 </head>
 <body>
-<div id="mocha"></div>
-<script src="../node_modules/mocha/mocha.js"></script>
-<script>
-    mocha.ui('bdd');
-</script>
-{{#each tests}}
-<script>{{content}}</script>
-{{/each}}
-<script>
-    if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
-    else { mocha.run(); }
-</script>
+    <div id="mocha"></div>
+    {{#each scripts}}
+    <script src="{{path}}"></script>
+    {{/each}}
+    <!--<script src="../node_modules/mocha/mocha.js"></script> -->
+    <script>
+        mocha.ui('bdd');
+    </script>
+    {{#each tests}}
+    <script src="{{path}}"></script>
+    {{/each}}
+    <script>
+        if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
+        else { mocha.run(); }
+    </script>
 </body>
 </html>

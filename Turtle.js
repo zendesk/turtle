@@ -14,6 +14,8 @@ var Client          = require('./lib/Client.js');
  */
 function Turtle() {
 
+  var templates = {};
+
   process.on('exit', function() {
     if(server) {
       server.stop();
@@ -49,14 +51,28 @@ function Turtle() {
     return this;
   }
 
+  this.template = function(def) {
+    if(!def.name) {
+      throw new Error('[name] is a mandatory field')
+    }
+    if(templates.hasOwnProperty(def.name)) {
+      throw new Error('A template with name ['+def.name+'] already exists. The names bust be unique in a turtle instance.')
+    }
+    templates[def.name] = def;
+  };
+
   /** Declares a new client.
    * All subsequent test() calls will add test to the latest declared client.
    */
-  this.client = function() {
-    var client = new Client();
+  this.client = function(templateName) {
+    var client = new Client(templateName);
     clients.push(client);
     return client;
-  }
+  };
+
+  this.export = function(module) {
+    module.exports = this;
+  };
 
   /** Actually run the tests
    *
@@ -73,10 +89,11 @@ function Turtle() {
 
       for(var i = 0 ; i < clients.length ; i++) {
 
-        if(!clients[i].template) {
-          clients[i].template = previousTemplate;
+        if(templates.hasOwnProperty(clients[i].getTemplateName())) {
+          clients[i].setTemplate(templates[clients[i].getTemplateName()]);
         } else {
-          previousTemplate = clients[i].template;
+          throw new Error('client #'+i + ' is referencing an unregistered template named ['+clients[i].getTemplateName()+']. ' +
+            'Register your templates with turtle.template({name: "'+clients[i].getTemplateName()+'", scripts: []})');
         }
 
         r.add(clients[i].run);
@@ -113,7 +130,7 @@ function Turtle() {
         }
       });
     });
-  }
+  };
 
 }
 

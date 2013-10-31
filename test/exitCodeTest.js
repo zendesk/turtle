@@ -1,32 +1,20 @@
-var Turtle = require("../index.js");
 
-var turtle = new Turtle();
+var turtle = require('./testEnvironment.js');
 
-turtle.server({
-  path: __dirname + '/server/always_ok_server.js',
-  args: ['--port', '4200'],
-  started: /^Server started/img
-});
-
-console.log('*************************** START');
-console.log('The following 1 error is OK');
-
-turtle.client().
-  template({
-    path: __dirname + '/template/globalVariableTemplate.html'
-  }).
+turtle.client('globalVariable').
   test({
     path: __dirname + "/client/global_variable.test2.client.js"
   });
 
-turtle.client().
-  template({
-    path: __dirname + '/template/jQueryTemplate.html'
-  }).
+turtle.client('jQuery').
   // use delayed booby trap to make sure that this test finished after the successful one
   test({
     path: __dirname + "/client/delayed.booby.trap.js"
   });
+
+
+console.log('*************************** START');
+console.log('The following 1 error is OK');
 
 turtle.run(function(exitCode) {
 

@@ -1,19 +1,20 @@
 {
   "name": "turtle",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Carries your UI tests in a phantomjs headless browser",
-  "main": "index.js",
+  "main": "Turtle.js",
   "scripts": {
     "test": "make test"
   },
   "dependencies": {
-    "handlebars": "~1.0.12",
-    "wrench": "~1.5.4",
-    "mocha": "~1.13.0",
-    "phantomjs": "~1.9.2-2",
-    "mocha-phantomjs": "~3.1.5",
-    "commander": "~2.0.0",
-    "serial": "0.0.6"
+    "handlebars": "1.0.12",
+    "wrench": "1.5.4",
+    "mocha": "1.13.0",
+    "phantomjs": "1.9.2-2",
+    "mocha-phantomjs": "3.1.5",
+    "commander": "2.0.0",
+    "serial": "0.0.6",
+    "temp": "0.6.0"
   },
   "keywords": [
     "phantomjs",
