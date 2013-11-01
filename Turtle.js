@@ -1,5 +1,6 @@
 var fs              = require('fs');
 var serial          = require('serial');
+var _               = require('underscore')
 var Server          = require('./lib/Server.js');
 var Client          = require('./lib/Client.js');
 
@@ -51,14 +52,38 @@ function Turtle() {
     return this;
   }
 
+  /** define a new template
+   *
+   * @param def the new template definition
+   * @param override (optional) the name of the template to override
+   */
   this.template = function(def) {
     if(!def.name) {
-      throw new Error('[name] is a mandatory field')
+      throw new Error('[name] is a mandatory field');
     }
     if(templates.hasOwnProperty(def.name)) {
-      throw new Error('A template with name ['+def.name+'] already exists. The names bust be unique in a turtle instance.')
+      throw new Error('A template with name ['+def.name+'] already exists. The names bust be unique in a turtle instance.');
     }
-    templates[def.name] = def;
+    if(def.override && !templates.hasOwnProperty(def.override)) {
+      throw new Error('Could not find a template to override with the following name ['+def.override+']');
+    }
+
+    // it's cleaner code everywhere else if we ensure all templates have non undefined values
+    if(!def.scripts) {
+      def.scripts = [];
+    }
+    if(!def.css) {
+      def.css = [];
+    }
+
+    if(def.override) {
+      templates[def.name]         = _.clone(templates[def.override]);
+      templates[def.name].name    = def.name;
+      templates[def.name].scripts = templates[def.name].scripts.concat(def.scripts);
+      templates[def.name].css     = templates[def.name].scripts.concat(def.css);
+    } else {
+      templates[def.name]         = def;
+    }
   };
 
   /** Declares a new client.

@@ -14,7 +14,8 @@
     "mocha-phantomjs": "3.1.5",
     "commander": "2.0.0",
     "serial": "0.0.6",
-    "temp": "0.6.0"
+    "temp": "0.6.0",
+    "underscore": "1.5.2"
   },
   "keywords": [
     "phantomjs",

@@ -90,11 +90,15 @@ declare a different template for each client.
 Turtle automatically embeds mocha and uses the 'bdd' test format.
 
 #### parameters
-##### options:Object
+##### definition:Object
 
 - name: A name for this template
 - css: any CSS script to embed in the template. The order may matter and will be respected by turtle
 - scripts: any JS script to embed in the template. The order may matter and will be respected by turtle
+
+##### override:String
+
+The name of a template to override. Any file added will be appended to the already defined ones.
 
 #### example
 
@@ -106,6 +110,18 @@ Turtle automatically embeds mocha and uses the 'bdd' test format.
     ],
     scripts: [
       '../path/to/my/included/library.js',
+      './another/path/to/another/lib.js'
+    ]
+  })
+```
+
+Then the override:
+
+```
+  turtle.template({
+    name: 'overridenTemplateName',
+    override: 'templateName',
+    scripts: [
       './another/path/to/another/lib.js'
     ]
   })
