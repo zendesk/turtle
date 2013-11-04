@@ -1,5 +1,6 @@
 var fs              = require('fs');
 var serial          = require('serial');
+var _               = require('underscore')
 var Server          = require('./lib/Server.js');
 var Client          = require('./lib/Client.js');
 
@@ -13,6 +14,8 @@ var Client          = require('./lib/Client.js');
  * @constructor
  */
 function Turtle() {
+
+  var templates = {};
 
   process.on('exit', function() {
     if(server) {
@@ -49,14 +52,52 @@ function Turtle() {
     return this;
   }
 
+  /** define a new template
+   *
+   * @param def the new template definition
+   * @param override (optional) the name of the template to override
+   */
+  this.template = function(def) {
+    if(!def.name) {
+      throw new Error('[name] is a mandatory field');
+    }
+    if(templates.hasOwnProperty(def.name)) {
+      throw new Error('A template with name ['+def.name+'] already exists. The names bust be unique in a turtle instance.');
+    }
+    if(def.override && !templates.hasOwnProperty(def.override)) {
+      throw new Error('Could not find a template to override with the following name ['+def.override+']');
+    }
+
+    // it's cleaner code everywhere else if we ensure all templates have non undefined values
+    if(!def.scripts) {
+      def.scripts = [];
+    }
+    if(!def.css) {
+      def.css = [];
+    }
+
+    if(def.override) {
+      templates[def.name]         = _.clone(templates[def.override]);
+      templates[def.name].name    = def.name;
+      templates[def.name].scripts = templates[def.name].scripts.concat(def.scripts);
+      templates[def.name].css     = templates[def.name].scripts.concat(def.css);
+    } else {
+      templates[def.name]         = def;
+    }
+  };
+
   /** Declares a new client.
    * All subsequent test() calls will add test to the latest declared client.
    */
-  this.client = function() {
-    var client = new Client();
+  this.client = function(templateName) {
+    var client = new Client(templateName);
     clients.push(client);
     return client;
-  }
+  };
+
+  this.export = function(module) {
+    module.exports = this;
+  };
 
   /** Actually run the tests
    *
@@ -73,10 +114,11 @@ function Turtle() {
 
       for(var i = 0 ; i < clients.length ; i++) {
 
-        if(!clients[i].template) {
-          clients[i].template = previousTemplate;
+        if(templates.hasOwnProperty(clients[i].getTemplateName())) {
+          clients[i].setTemplate(templates[clients[i].getTemplateName()]);
         } else {
-          previousTemplate = clients[i].template;
+          throw new Error('client #'+i + ' is referencing an unregistered template named ['+clients[i].getTemplateName()+']. ' +
+            'Register your templates with turtle.template({name: "'+clients[i].getTemplateName()+'", scripts: []})');
         }
 
         r.add(clients[i].run);
@@ -113,7 +155,7 @@ function Turtle() {
         }
       });
     });
-  }
+  };
 
 }
 
