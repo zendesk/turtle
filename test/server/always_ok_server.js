@@ -10,6 +10,9 @@ program
 var port = program.port || 4200;
 
 server = http.createServer(function(req, res) {
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
   res.write('ok');
   res.end();
 });
