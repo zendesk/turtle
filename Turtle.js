@@ -3,7 +3,8 @@ var serial          = require('serial');
 var _               = require('underscore')
 var Server          = require('./lib/Server.js');
 var Client          = require('./lib/Client.js');
-
+var FileServer      = require('./lib/FileServer.js');
+var logger          = require('./lib/Logger.js')('turtle');
 /**
  *
  * @param options:
@@ -13,19 +14,19 @@ var Client          = require('./lib/Client.js');
  *
  * @constructor
  */
-function Turtle() {
+function Turtle(port) {
 
   var templates = {};
+  port = port || 8686;
+  var stayUpWhenDone = false;
+
+  var servers = [];
+  var fileServer;
+  var clients = [];
 
   process.on('exit', function() {
-    if(server) {
-      server.stop();
-    }
+    stopServers()
   });
-
-  var server;
-
-  var clients = [];
 
   /** Configure a server to be started before the tests
    *
@@ -44,13 +45,9 @@ function Turtle() {
    * @returns {Turtle}
    */
   this.server = function(options) {
-    if(server) {
-      throw new Error('Server cannot be defined more than once.');
-    } else {
-      server = new Server(options);
-    }
+    servers.push(new Server(options));
     return this;
-  }
+  };
 
   /** define a new template
    *
@@ -89,14 +86,21 @@ function Turtle() {
   /** Declares a new client.
    * All subsequent test() calls will add test to the latest declared client.
    */
-  this.client = function(templateName) {
-    var client = new Client(templateName);
+  this.client = function(options) {
+    if(!options.name) {
+      options.name = 'client' + (clients.length + 1); // this is not for an array, we start at 1
+    }
+    var client = new Client(options);
     clients.push(client);
     return client;
   };
 
   this.export = function(module) {
     module.exports = this;
+  };
+
+  this.stayUpWhenDone = function() {
+    stayUpWhenDone = true;
   };
 
   /** Actually run the tests
@@ -106,57 +110,110 @@ function Turtle() {
    */
   this.run = function(callback) {
 
-    server.start(function () {
+    startServers(function () {
 
-      var r = new serial.ParallelRunner();
-
-      var previousTemplate; // we want to propagate templates to the subsequent clients unless they have their own template
-
+      if(fileServer) {
+        fileServer.stop()
+      }
+      fileServer = new FileServer(port);
       for(var i = 0 ; i < clients.length ; i++) {
+        fileServer.addClient(clients[i])
+      }
+      fileServer.start(function() {
 
-        if(templates.hasOwnProperty(clients[i].getTemplateName())) {
-          clients[i].setTemplate(templates[clients[i].getTemplateName()]);
-        } else {
-          throw new Error('client #'+i + ' is referencing an unregistered template named ['+clients[i].getTemplateName()+']. ' +
-            'Register your templates with turtle.template({name: "'+clients[i].getTemplateName()+'", scripts: []})');
+        var r = new serial.ParallelRunner();
+
+        var previousTemplate; // we want to propagate templates to the subsequent clients unless they have their own template
+
+        for(var i = 0 ; i < clients.length ; i++) {
+
+          if(templates.hasOwnProperty(clients[i].getTemplateName())) {
+            clients[i].setTemplate(templates[clients[i].getTemplateName()]);
+          } else {
+            throw new Error('client #'+i + ' is referencing an unregistered template named ['+clients[i].getTemplateName()+']. ' +
+              'Register your templates with turtle.template({name: "'+clients[i].getTemplateName()+'", scripts: []})');
+          }
+
+          r.add(clients[i].run, 'http://localhost:'+port);
+
         }
 
-        r.add(clients[i].run);
+        r.run(function(returnArguments) {
 
-      }
 
-      r.run(function(returnArguments) {
+          // don't actually care about the worse exit code. Just need to know if there was at least one failure.
+          var exitCode;
 
-        server.stop();
+          if(returnArguments) {
+            for(var i = 0 ; i < returnArguments.length ; i++) {
 
-        // don't actually care about the worse exit code. Just need to know if there was at least one failure.
-        var exitCode;
+              exitCode = 1; // assume failure because in testing, false negative is better than false positive
+              if(returnArguments[i] && returnArguments[i].length > 0) {
 
-        if(returnArguments) {
-          for(var i = 0 ; i < returnArguments.length ; i++) {
+                var exitCode = returnArguments[i][0];
 
-            exitCode = 1; // assume failure because in testing, false negative is better than false positive
-            if(returnArguments[i] && returnArguments[i].length > 0) {
+              }
 
-              var exitCode = returnArguments[i][0];
-
-            }
-
-            if(exitCode !== 0) {
-              break;
+              if(exitCode !== 0) {
+                break;
+              }
             }
           }
-        }
 
-        if(callback) {
-          callback(exitCode);
-        } else {
-          process.exit(exitCode);
-        }
+          if(callback) {
+
+            stopServers();
+            callback(exitCode);
+
+          } else if(!stayUpWhenDone) {
+
+            stopServers();
+            process.exit(exitCode);
+
+          } else {
+
+            process.on('SIGINT', function() {
+              stopServers();
+              process.exit();
+            });
+
+            // TODO: print URLs
+            logger.info('Tests are completed and are available at:');
+            for(var i = 0 ; i < clients.length ; i++) {
+              logger.info('http://localhost:' + port + '/');
+            }
+          }
+        });
       });
     });
   };
 
+  function startServers(callback) {
+    // There may be dependencies between server. We want to support that therefore servers are started one after the
+    // other
+    var r = new serial.SerialRunner();
+
+    for(var i = 0 ; i < servers.length ; i++) {
+      r.add(servers[i].start)
+    }
+
+    r.run(function() {
+
+      logger.info('Started ['+servers.length+'] server(s)');
+      callback();
+    });
+
+  }
+
+  function stopServers() {
+    for(var i = 0 ; i < servers.length ; i++) {
+      servers[i].stop();
+    }
+    if(fileServer) {
+      fileServer.stop();
+      fileServer = null;
+    }
+  }
 }
 
 

@@ -8,6 +8,12 @@ turtle.server({
   started: /^Server started/img
 });
 
+turtle.server({
+  path: __dirname + '/server/always_ok_server.js',
+  args: ['--port', '4201'],
+  started: /^Server started/img
+});
+
 turtle.template({
   name: 'jQuery',
   scripts: [

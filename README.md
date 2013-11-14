@@ -13,13 +13,13 @@ This module is still work in progress.
 
 ## Usage
 
-Allows to start multiple clients, with multiple templates (optional).
+Allows to start multiple servers, multiple clients, with multiple templates (optional).
 
 
 ```
   var Turtle = require('turtle');
 
-  var turtle = new Turtle();
+  var turtle = new Turtle(8686);
 
   turtle.server({
     path: __dirname + '/server/always_ok_server.js',
@@ -48,28 +48,29 @@ Allows to start multiple clients, with multiple templates (optional).
   turtle.run();
 ```
 
-## Turtle
+## Turtle([port])
 
-This is the main test runner
+This is the main test runner. It serves the test files on the port given in parameter. Default is ```8686```.
 
 ### turtle.server(options)
 
-A server is a child process started before the tests.
 
 #### parameters
 ##### options:Object
 
 - path:String the file path of the node.js server entry point.
+- cmd:String (optional) the command used to start the server. Default is ```node```
 - args:Array a list of arguments to pass to the child process. The format is the same as arguments in
 childProcess.spawn()
 - log:Object
   - prefix:String prefix the server logs with this string
   - silent:Boolean do not show the server logs in stdout or stderr
 
-### turtle.client(templateName)
+### turtle.client(options)
 #### parameters
 
-- templateName:String the name of the template to use for this client. Templates are declared for each turtle instance
+- options.template:String the name of the template to use for this client. Templates are declared for each turtle instance
+- options.name:String a name for this client. the client will be available at the url /client/<name>
 
 Creates and returns the new client for chaining.
 
@@ -126,11 +127,16 @@ Then the override:
     ]
   })
 ```
+### turtle.stayUpWhenDone()
+
+Keep the turtle file server running after the tests are done.
+
 
 ### turtle.export(module)
 
 Exports itself to the module passed in parameter. It allows to reuse templates and server definitions. See the tests for
 an example.
+
 
 ### turtle.run([callback])
 
@@ -156,11 +162,15 @@ Add one or several tests to the current client.
 - path:String directory or filename
 - match:RegExp a regular expression against which file names are tested. Matching files are included.
 
-### client.keepTestFile()
 
 Do not delete the html test files after the tests have ended. Using this will output the path of the test files in the
 console.
 
+## Migration to the new turtle
+
+### 0.3.0
+
+* change ```turtle.client('templateName')``` to ```turtle.client({template: 'templateName'})```
 
 ## TODO
 

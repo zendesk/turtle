@@ -1,17 +1,22 @@
 
 var turtle = require('./testEnvironment.js');
 
-turtle.client('globalVariable').
+turtle.client({
+    template: 'globalVariable'
+  }).
   test({
     path: __dirname + "/client/global_variable.test2.client.js"
   });
 
-turtle.client('jQuery').
+turtle.client({
+    template: 'jQuery'
+  }).
   // use delayed booby trap to make sure that this test finished after the successful one
   test({
     path: __dirname + "/client/delayed.booby.trap.js"
   });
 
+turtle.stayUpWhenDone();
 
 console.log('*************************** START');
 console.log('The following 1 error is OK');
