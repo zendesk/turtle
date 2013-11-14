@@ -86,10 +86,12 @@ function Turtle(port) {
   /** Declares a new client.
    * All subsequent test() calls will add test to the latest declared client.
    */
-  this.client = function(templateName) {
-    var client = new Client(templateName);
+  this.client = function(options) {
+    if(!options.name) {
+      options.name = 'client' + (clients.length + 1); // this is not for an array, we start at 1
+    }
+    var client = new Client(options);
     clients.push(client);
-    client.setName('client' + clients.length);
     return client;
   };
 
@@ -132,7 +134,7 @@ function Turtle(port) {
               'Register your templates with turtle.template({name: "'+clients[i].getTemplateName()+'", scripts: []})');
           }
 
-          r.add(clients[i].run, 'http://localhost:'+port+'/'+clients[i].getName());
+          r.add(clients[i].run, 'http://localhost:'+port);
 
         }
 
@@ -178,7 +180,7 @@ function Turtle(port) {
             // TODO: print URLs
             logger.info('Tests are completed and are available at:');
             for(var i = 0 ; i < clients.length ; i++) {
-              logger.info('http://localhost:'+port+'/'+clients[i].getName());
+              logger.info('http://localhost:' + port + '/');
             }
           }
         });

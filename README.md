@@ -66,10 +66,11 @@ childProcess.spawn()
   - prefix:String prefix the server logs with this string
   - silent:Boolean do not show the server logs in stdout or stderr
 
-### turtle.client(templateName)
+### turtle.client(options)
 #### parameters
 
-- templateName:String the name of the template to use for this client. Templates are declared for each turtle instance
+- options.template:String the name of the template to use for this client. Templates are declared for each turtle instance
+- options.name:String a name for this client. the client will be available at the url /client/<name>
 
 Creates and returns the new client for chaining.
 
@@ -165,6 +166,11 @@ Add one or several tests to the current client.
 Do not delete the html test files after the tests have ended. Using this will output the path of the test files in the
 console.
 
+## Migration to the new turtle
+
+### 0.3.0
+
+* change ```turtle.client('templateName')``` to ```turtle.client({template: 'templateName'})```
 
 ## TODO
 
