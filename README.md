@@ -34,13 +34,19 @@ Allows to start multiple servers, multiple clients, with multiple templates (opt
     ]
   });
 
-  turtle.client('myJQueryTemplate').
+  turtle.client({
+      name: 'client1',
+      template: 'myJQueryTemplate'
+    }).
     test({
       path: __dirname + "/client",
       filter: /\.test1\.client\.js$/im
     });
 
-  turtle.client('myJQueryTemplate').
+  turtle.client({
+      name: 'client2',
+      template: 'myJQueryTemplate'
+    }).
     test({
       path: __dirname + "/client/global_variable.test2.client.js"
     });
