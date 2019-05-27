@@ -7,17 +7,17 @@
     "test": "make test"
   },
   "dependencies": {
-    "handlebars": "1.0.12",
-    "wrench": "1.5.4",
-    "mocha": "1.13.0",
-    "phantomjs": "1.9.8",
-    "mocha-phantomjs": "3.1.5",
-    "commander": "2.0.0",
-    "serial": "0.0.6",
-    "winston": "0.7.2",
-    "express": "3.4.4",
-    "temp": "0.6.0",
-    "underscore": "1.5.2"
+    "handlebars": "4.1.2",
+    "wrench": "1.5.9",
+    "mocha": "6.1.4",
+    "phantomjs-prebuilt": "2.1.16",
+    "mocha-phantomjs": "4.1.0",
+    "commander": "2.20.0",
+    "serial": "0.0.9",
+    "winston": "3.2.1",
+    "express": "4.17.1",
+    "temp": "0.9.0",
+    "underscore": "1.9.1"
   },
   "keywords": [
     "phantomjs",
