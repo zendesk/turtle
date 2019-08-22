@@ -1,3 +1,11 @@
 language: node_js
 node_js:
-  - '0.10'
+  - "10"
+  - "12"
+script:
+  - npm test
+before_install: 
+  - npm install npm@6.9.0 -g
+branches:
+  only: [master, staging, production]
+sudo: false
