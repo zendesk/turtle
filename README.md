@@ -1,6 +1,6 @@
 ## What it is
 
-Turtles handles server start/shutdown and client side test in a headless browser (mocha-phantomjs).
+Turtles handles server start/shutdown and client side test in a headless browser (mocha-headless-chrome).
 
 This module is still work in progress.
 
@@ -181,7 +181,6 @@ console.
 ## TODO
 
 - Support for multiple servers, more tests
-- Deprecate Phantomjs and migrate to use Chrome engine.
 
 
 ## Copyright and License
