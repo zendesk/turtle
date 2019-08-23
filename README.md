@@ -180,7 +180,8 @@ console.
 
 ## TODO
 
-- support for multiple servers, more tests
+- Support for multiple servers, more tests
+- Deprecate Phantomjs and migrate to use Chrome engine.
 
 
 ## Copyright and License
