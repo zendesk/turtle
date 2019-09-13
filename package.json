@@ -1,6 +1,6 @@
 {
   "name": "turtle",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Carries your UI tests in a chrome headless browser",
   "main": "Turtle.js",
   "scripts": {
