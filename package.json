@@ -7,16 +7,16 @@
     "test": "make test"
   },
   "dependencies": {
-    "commander": "2.0.0",
+    "commander": "^5.0.0",
     "express": "^4.17.1",
-    "handlebars": "^4.7.2",
-    "mocha": "^5.2.0",
+    "handlebars": "^4.7.6",
+    "mocha": "^7.1.1",
     "mocha-headless-chrome": "^2.0.3",
-    "serial": "0.0.6",
-    "temp": "0.6.0",
-    "underscore": "1.5.2",
+    "serial": "0.0.9",
+    "temp": "^0.9.1",
+    "underscore": "^1.10.2",
     "winston": "^3.2.1",
-    "wrench": "1.5.4"
+    "wrench": "^1.5.9"
   },
   "keywords": [
     "headless chrome",
