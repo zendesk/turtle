@@ -14,7 +14,7 @@
     "mocha-headless-chrome": "^2.0.3",
     "serial": "0.0.9",
     "temp": "^0.9.1",
-    "underscore": "^1.10.2",
+    "underscore": "^1.13.1",
     "winston": "^3.2.1",
     "wrench": "^1.5.9"
   },
